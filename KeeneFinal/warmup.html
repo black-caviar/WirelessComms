@@ -1,0 +1,351 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>warmup</title><meta name="generator" content="MATLAB 9.6"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2020-01-29"><meta name="DC.source" content="warmup.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#1">Comms Final Project Warmup</a></li><li><a href="#2">Transmission With and Without Equalization</a></li><li><a href="#3">Transmission With Encoding</a></li></ul></div><h2 id="1">Comms Final Project Warmup</h2><pre class="codeinput">clear <span class="string">all</span>;close <span class="string">all</span>;clc
+
+numIter = 1000;  <span class="comment">% Num sim iterations</span>
+nSym = 1000;    <span class="comment">% The number of symbols per packet</span>
+SNR_Vec = 0:2:16;
+lenSNR = length(SNR_Vec);
+nTrain = 100; <span class="comment">% Number of training bits for equalizer</span>
+
+M = 16;        <span class="comment">% The M-ary number</span>
+bpSym = log2(M); <span class="comment">% Bits per symbol</span>
+
+chan = 1;      <span class="comment">% No channel</span>
+chan = [1 .2 .4]; <span class="comment">% Somewhat invertible channel impulse response, Moderate ISI</span>
+<span class="comment">%chan = [0.227 0.460 0.688 0.460 0.227]';   % Not so invertible, severe ISI</span>
+</pre><h2 id="2">Transmission With and Without Equalization</h2><pre class="codeinput"><span class="comment">% Preallocated error vector</span>
+berVec = zeros(numIter, lenSNR);
+berVecNoEQ = berVec;
+
+<span class="keyword">parfor</span> i = 1:numIter
+    <span class="comment">% equalizer declaration here for parallelization</span>
+    <span class="comment">%eqlms = dfe(10,5,lms(0.005));</span>
+    <span class="comment">% value chosen to minimize training bits</span>
+    eqlms = dfe(7, 3, rls(0.99, 1));
+    eqlms.SigConst = qammod(0:M-1,M,<span class="string">'UnitAveragePower'</span>,true);
+    eqlms.ResetBeforeFiltering = 0;
+
+    bits = randi([0 1], nSym*M, 1); <span class="comment">% generate data</span>
+    <span class="keyword">for</span> j = 1:lenSNR
+        <span class="comment">% encode, transmit, and receive data</span>
+        rdata = reshape(bits, bpSym, []);
+        sym = bi2de(rdata', 2); <span class="comment">% make symbols</span>
+
+        <span class="comment">% encode symbols</span>
+        tx = qammod(sym, M, <span class="string">'InputType'</span>, <span class="string">'integer'</span>, <span class="string">'UnitAveragePower'</span>,true);
+
+        <span class="keyword">if</span> isequal(chan,1)
+            txChan = tx; <span class="comment">% makes things faster if no channel</span>
+        <span class="keyword">else</span>
+            txChan = filter(chan,1,tx);  <span class="comment">% Apply the channel.</span>
+        <span class="keyword">end</span>
+
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); <span class="comment">% Add AWGN</span>
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); <span class="comment">% Equalize the channel</span>
+        rx = qamdemod(txEQ, M, <span class="string">'UnitAveragePower'</span>, true); <span class="comment">% Decode symbols</span>
+        rxMSG = de2bi(rx);
+        dataEQ = reshape(rxMSG', [], 1); <span class="comment">%return bit stream</span>
+        [~, berVec(i,j)] = biterr(dataEQ, bits);
+
+        rxNoEQ = qamdemod(txNoisy, M, <span class="string">'UnitAveragePower'</span>, true); <span class="comment">% Decode symbols</span>
+        rxMSGNoEQ = de2bi(rxNoEQ);
+        data = reshape(rxMSGNoEQ', [], 1);
+        [~, berVecNoEQ(i,j)] = biterr(data, bits);
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+ber = mean(berVec,1); <span class="comment">% Average out</span>
+berNoEQ = mean(berVecNoEQ, 1);
+semilogy(SNR_Vec, ber)
+hold <span class="string">on</span>;
+semilogy(SNR_Vec, berNoEQ)
+<span class="comment">%value of ber at SNR of 12</span>
+fprintf(<span class="string">'Value of ber at SNR = 12: %d'</span>, ber(7))
+<span class="comment">% Compute the theoretical BER for this scenario</span>
+berTheory = berawgn(SNR_Vec,<span class="string">'qam'</span>,M,<span class="string">'nondiff'</span>);
+semilogy(SNR_Vec,berTheory,<span class="string">'r'</span>)
+title(<span class="string">'Unencoded Transmision'</span>);
+xlabel(<span class="string">'SNR'</span>);
+ylabel(<span class="string">'BER'</span>);
+legend(<span class="string">'BER With Equalization'</span>, <span class="string">'BER Without Equalization'</span>, <span class="keyword">...</span>
+    <span class="string">'Theoretical BER'</span>, <span class="string">'Location'</span>, <span class="string">'southwest'</span>);
+</pre><pre class="codeoutput">Starting parallel pool (parpool) using the 'local' profile ...
+Connected to the parallel pool (number of workers: 6).
+Value of ber at SNR = 12: 3.283750e-04</pre><img vspace="5" hspace="5" src="warmup_01.png" alt=""> <h2 id="3">Transmission With Encoding</h2><pre class="codeinput">berVecE = zeros(numIter, lenSNR);
+
+<span class="comment">%enc157 = comm.BCHEncoder(15,7);</span>
+<span class="comment">%dec157 = comm.BCHDecoder(15,7);</span>
+
+trellis12 = poly2trellis(5,[37 33], 37);
+trellis23 = poly2trellis([5 4],[23 35 0; 0 5 13]); <span class="comment">%very very close</span>
+<span class="comment">% this 2/3 code is a better fit than the 1/2 code</span>
+
+<span class="keyword">parfor</span> i = 1:numIter
+    bits = randi([0 1], 666*M, 1);
+    code = convenc(bits, trellis23);
+    <span class="comment">%code = enc157(bits);</span>
+    <span class="comment">%equalizer declaration here for parallelization</span>
+    <span class="comment">%eqlms = dfe(10,5,lms(0.01));</span>
+    eqlms = dfe(7, 3, rls(0.99, 1));
+    eqlms.SigConst = qammod(0:M-1,M,<span class="string">'UnitAveragePower'</span>,true);
+    eqlms.ResetBeforeFiltering = 0;
+
+    <span class="keyword">for</span> j = 1:lenSNR
+
+        <span class="comment">% encode, transmit, and receive data</span>
+        rdata = reshape(code, bpSym, []);
+        sym = bi2de(rdata', 2); <span class="comment">% make symbols</span>
+
+        <span class="comment">% encode symbols</span>
+        tx = qammod(sym, M, <span class="string">'InputType'</span>, <span class="string">'integer'</span>, <span class="string">'UnitAveragePower'</span>,true);
+
+        <span class="keyword">if</span> isequal(chan,1)
+            txChan = tx; <span class="comment">% makes things faster if no channel</span>
+        <span class="keyword">else</span>
+            txChan = filter(chan,1,tx);  <span class="comment">% Apply the channel.</span>
+        <span class="keyword">end</span>
+
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); <span class="comment">% Add AWGN</span>
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); <span class="comment">% Equalize the channel</span>
+        rx = qamdemod(txEQ, M, <span class="string">'UnitAveragePower'</span>, true); <span class="comment">% Decode symbols</span>
+        rxMSG = de2bi(rx);
+        dataEQ = reshape(rxMSG', [], 1); <span class="comment">%return bit stream</span>
+
+        decode = vitdec(dataEQ, trellis23, 34, <span class="string">'trunc'</span>, <span class="string">'hard'</span>);
+        <span class="comment">%decode = dec157(rcv);</span>
+        [~, berVecE(i,j)] = biterr(decode, bits);
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">% Bitrate Calculation</span>
+<span class="comment">% In order to keep the number of symbols below 1000, the number of bits</span>
+<span class="comment">% sent was adjusted to 2/3rds of 1000*M Only 999 symbols are sent.</span>
+<span class="comment">%</span>
+<span class="comment">% Given 999 packets, 100 are lost to the channel equalizer</span>
+<span class="comment">% The remaining 899 symbols are encoded with a rate 2/3 convolutional code</span>
+<span class="comment">% which means that 1/3 of the bits contained by those symbols are parity</span>
+<span class="comment">% bits. Those remaining 899 symbols must therefore contain 4,795 parity</span>
+<span class="comment">% bits and 9,589 data bits. Out of a total 15,984 bits sent, 9,589 are</span>
+<span class="comment">% usable data. Taking the time to transmit 1 symbol to be the unit of time,</span>
+<span class="comment">% the bit rate is 9,589/999 = 9.5986 bit/symbol time.</span>
+
+berEnc = mean(berVecE,1);
+fprintf(<span class="string">'Value of ber at SNR = 12: %d'</span>, berEnc(7))
+figure;
+semilogy(SNR_Vec, berEnc);
+hold <span class="string">on</span>
+semilogy(SNR_Vec,berTheory,<span class="string">'r'</span>);
+legend(<span class="string">'BER With Encoding'</span>, <span class="string">'Theoretical BER'</span>, <span class="string">'Location'</span>, <span class="string">'southwest'</span>)
+</pre><pre class="codeoutput">Value of ber at SNR = 12: 9.947447e-06</pre><img vspace="5" hspace="5" src="warmup_02.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2019a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Comms Final Project Warmup
+clear all;close all;clc
+
+numIter = 1000;  % Num sim iterations 
+nSym = 1000;    % The number of symbols per packet
+SNR_Vec = 0:2:16;
+lenSNR = length(SNR_Vec);
+nTrain = 100; % Number of training bits for equalizer 
+
+M = 16;        % The M-ary number
+bpSym = log2(M); % Bits per symbol
+
+chan = 1;      % No channel
+chan = [1 .2 .4]; % Somewhat invertible channel impulse response, Moderate ISI
+%chan = [0.227 0.460 0.688 0.460 0.227]';   % Not so invertible, severe ISI
+
+%% Transmission With and Without Equalization
+
+% Preallocated error vector
+berVec = zeros(numIter, lenSNR);
+berVecNoEQ = berVec;
+
+parfor i = 1:numIter
+    % equalizer declaration here for parallelization
+    %eqlms = dfe(10,5,lms(0.005));
+    % value chosen to minimize training bits
+    eqlms = dfe(7, 3, rls(0.99, 1));
+    eqlms.SigConst = qammod(0:M-1,M,'UnitAveragePower',true);
+    eqlms.ResetBeforeFiltering = 0;
+    
+    bits = randi([0 1], nSym*M, 1); % generate data
+    for j = 1:lenSNR
+        % encode, transmit, and receive data               
+        rdata = reshape(bits, bpSym, []);
+        sym = bi2de(rdata', 2); % make symbols
+    
+        % encode symbols
+        tx = qammod(sym, M, 'InputType', 'integer', 'UnitAveragePower',true);
+        
+        if isequal(chan,1)
+            txChan = tx; % makes things faster if no channel
+        else
+            txChan = filter(chan,1,tx);  % Apply the channel.
+        end    
+    
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); % Add AWGN
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); % Equalize the channel
+        rx = qamdemod(txEQ, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSG = de2bi(rx); 
+        dataEQ = reshape(rxMSG', [], 1); %return bit stream
+        [~, berVec(i,j)] = biterr(dataEQ, bits);
+        
+        rxNoEQ = qamdemod(txNoisy, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSGNoEQ = de2bi(rxNoEQ); 
+        data = reshape(rxMSGNoEQ', [], 1);
+        [~, berVecNoEQ(i,j)] = biterr(data, bits);
+    end
+end
+
+ber = mean(berVec,1); % Average out 
+berNoEQ = mean(berVecNoEQ, 1);
+semilogy(SNR_Vec, ber)
+hold on;
+semilogy(SNR_Vec, berNoEQ)
+%value of ber at SNR of 12
+fprintf('Value of ber at SNR = 12: %d', ber(7))
+% Compute the theoretical BER for this scenario
+berTheory = berawgn(SNR_Vec,'qam',M,'nondiff');
+semilogy(SNR_Vec,berTheory,'r')
+title('Unencoded Transmision');
+xlabel('SNR');
+ylabel('BER');
+legend('BER With Equalization', 'BER Without Equalization', ...
+    'Theoretical BER', 'Location', 'southwest');
+
+%% Transmission With Encoding
+
+berVecE = zeros(numIter, lenSNR);
+
+%enc157 = comm.BCHEncoder(15,7);
+%dec157 = comm.BCHDecoder(15,7);
+ 
+trellis12 = poly2trellis(5,[37 33], 37);
+trellis23 = poly2trellis([5 4],[23 35 0; 0 5 13]); %very very close
+% this 2/3 code is a better fit than the 1/2 code
+
+parfor i = 1:numIter
+    bits = randi([0 1], 666*M, 1); 
+    code = convenc(bits, trellis23);
+    %code = enc157(bits);
+    %equalizer declaration here for parallelization
+    %eqlms = dfe(10,5,lms(0.01));
+    eqlms = dfe(7, 3, rls(0.99, 1));
+    eqlms.SigConst = qammod(0:M-1,M,'UnitAveragePower',true);
+    eqlms.ResetBeforeFiltering = 0;
+    
+    for j = 1:lenSNR
+        
+        % encode, transmit, and receive data               
+        rdata = reshape(code, bpSym, []);
+        sym = bi2de(rdata', 2); % make symbols
+    
+        % encode symbols
+        tx = qammod(sym, M, 'InputType', 'integer', 'UnitAveragePower',true);
+        
+        if isequal(chan,1)
+            txChan = tx; % makes things faster if no channel
+        else
+            txChan = filter(chan,1,tx);  % Apply the channel.
+        end    
+    
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); % Add AWGN
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); % Equalize the channel
+        rx = qamdemod(txEQ, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSG = de2bi(rx); 
+        dataEQ = reshape(rxMSG', [], 1); %return bit stream
+        
+        decode = vitdec(dataEQ, trellis23, 34, 'trunc', 'hard');
+        %decode = dec157(rcv);
+        [~, berVecE(i,j)] = biterr(decode, bits);
+    end
+end
+
+% Bitrate Calculation
+% In order to keep the number of symbols below 1000, the number of bits
+% sent was adjusted to 2/3rds of 1000*M Only 999 symbols are sent.
+% 
+% Given 999 packets, 100 are lost to the channel equalizer
+% The remaining 899 symbols are encoded with a rate 2/3 convolutional code
+% which means that 1/3 of the bits contained by those symbols are parity
+% bits. Those remaining 899 symbols must therefore contain 4,795 parity
+% bits and 9,589 data bits. Out of a total 15,984 bits sent, 9,589 are 
+% usable data. Taking the time to transmit 1 symbol to be the unit of time,
+% the bit rate is 9,589/999 = 9.5986 bit/symbol time.
+
+berEnc = mean(berVecE,1);
+fprintf('Value of ber at SNR = 12: %d', berEnc(7))
+figure;
+semilogy(SNR_Vec, berEnc);
+hold on
+semilogy(SNR_Vec,berTheory,'r');
+legend('BER With Encoding', 'Theoretical BER', 'Location', 'southwest')
+##### SOURCE END #####
+--></body></html>

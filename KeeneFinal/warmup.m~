@@ -1,13 +1,14 @@
 %% Comms Final Project Warmup
 clear all;close all;clc
 
-numIter = 1000;  % Num sim iterations 
+numIter = 10;  % Num sim iterations 
 nSym = 1000;    % The number of symbols per packet
 SNR_Vec = 0:2:16;
 lenSNR = length(SNR_Vec);
-ntrain = 100; % Number of training bits for equalizer 
+nTrain = 100; % Number of training bits for equalizer 
 
 M = 16;        % The M-ary number
+bpSym = log2(M); % Bits per symbol
 
 chan = 1;      % No channel
 chan = [1 .2 .4]; % Somewhat invertible channel impulse response, Moderate ISI
@@ -17,8 +18,7 @@ chan = [1 .2 .4]; % Somewhat invertible channel impulse response, Moderate ISI
 
 % Preallocated error vector
 berVec = zeros(numIter, lenSNR);
-
-berVecNoEQ = zeros(numIter, lenSNR);
+berVecNoEQ = berVec;
 
 parfor i = 1:numIter
     % equalizer declaration here for parallelization
@@ -30,17 +30,35 @@ parfor i = 1:numIter
     
     bits = randi([0 1], nSym*M, 1); % generate data
     for j = 1:lenSNR
-        % encode, transmit, and receive data
-        rcv = transmit(bits, chan, M, SNR_Vec(j), ntrain, eqlms);
-        [nerr(i,j), berVec(i,j)] = biterr(rcv, bits);
+        % encode, transmit, and receive data               
+        rdata = reshape(bits, bpSym, []);
+        sym = bi2de(rdata', 2); % make symbols
+    
+        % encode symbols
+        tx = qammod(sym, M, 'InputType', 'integer', 'UnitAveragePower',true);
         
-        rcvN = transmit(bits, chan, M, SNR_Vec(j), 0, 0);
-        [~, berVecNoEQ(i,j)] = biterr(rcvN, bits);
+        if isequal(chan,1)
+            txChan = tx; % makes things faster if no channel
+        else
+            txChan = filter(chan,1,tx);  % Apply the channel.
+        end    
+    
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); % Add AWGN
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); % Equalize the channel
+        rx = qamdemod(txEQ, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSG = de2bi(rx); 
+        dataEQ = reshape(rxMSG', [], 1); %return bit stream
+        [~, berVec(i,j)] = biterr(dataEQ, bits);
+        
+        rxNoEQ = qamdemod(txNoisy, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSGNoEQ = de2bi(rxNoEQ); 
+        data = reshape(rxMSGNoEQ', [], 1);
+        [~, berVecNoEQ(i,j)] = biterr(data, bits);
     end
 end
-%average out 
-ber = mean(berVec,1);
-berNoEQ = mean(berVecNoEQ,1);
+
+ber = mean(berVec,1); % Average out 
+berNoEQ = mean(berVecNoEQ, 1);
 semilogy(SNR_Vec, ber)
 hold on;
 semilogy(SNR_Vec, berNoEQ)
@@ -58,19 +76,15 @@ legend('BER With Equalization', 'BER Without Equalization', ...
 %% Transmission With Encoding
 
 berVecE = zeros(numIter, lenSNR);
-nerrE = berVec;
 
 %enc157 = comm.BCHEncoder(15,7);
 %dec157 = comm.BCHDecoder(15,7);
  
 trellis12 = poly2trellis(5,[37 33], 37);
-%trellis12 = poly2trellis(7,[171 133]);
-%trellis12 = poly2trellis(7, {'1 + x^3 + x^4 + x^5 + x^6', ...
-%    '1 + x + x^3 + x^4 + x^6'});
 trellis23 = poly2trellis([5 4],[23 35 0; 0 5 13]); %very very close
 % this 2/3 code is a better fit than the 1/2 code
 
-parfor i = 1:numIter
+for i = 1:numIter
     bits = randi([0 1], 666*M, 1); 
     code = convenc(bits, trellis23);
     %code = enc157(bits);
@@ -81,13 +95,32 @@ parfor i = 1:numIter
     eqlms.ResetBeforeFiltering = 0;
     
     for j = 1:lenSNR
-        rcv = transmit(code, chan, M, SNR_Vec(j), ntrain, eqlms);
-        decode = vitdec(rcv, trellis23, 34, 'trunc', 'hard');
+        
+        % encode, transmit, and receive data               
+        rdata = reshape(code, bpSym, []);
+        sym = bi2de(rdata', 2); % make symbols
+    
+        % encode symbols
+        tx = qammod(sym, M, 'InputType', 'integer', 'UnitAveragePower',true);
+        
+        if isequal(chan,1)
+            txChan = tx; % makes things faster if no channel
+        else
+            txChan = filter(chan,1,tx);  % Apply the channel.
+        end    
+    
+        txNoisy = awgn(txChan, SNR_Vec(j) + 10*log10(bpSym)); % Add AWGN
+        txEQ = equalize(eqlms, txNoisy, tx(1:nTrain)); % Equalize the channel
+        rx = qamdemod(txEQ, M, 'UnitAveragePower', true); % Decode symbols
+        rxMSG = de2bi(rx); 
+        dataEQ = reshape(rxMSG', [], 1); %return bit stream
+        
+        decode = vitdec(dataEQ, trellis23, 34, 'trunc', 'hard');
         %decode = dec157(rcv);
-        [nerrE(i,j), berVecE(i,j)] = biterr(decode, bits);
+        [~, berVecE(i,j)] = biterr(decode, bits);
     end
 end
-Kls 
+
 % Bitrate Calculation
 % In order to keep the number of symbols below 1000, the number of bits
 % sent was adjusted to 2/3rds of 1000*M Only 999 symbols are sent.
