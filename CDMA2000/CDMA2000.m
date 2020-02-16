@@ -1,0 +1,1 @@
+%% CDMA2000 X1 Voice Channel Simulation
