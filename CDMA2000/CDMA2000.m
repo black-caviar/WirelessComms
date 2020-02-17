@@ -3,15 +3,6 @@ PNI = 'x^15 + x^13 + x^9 + x^8 + x^7 + x^5 + 1'
 PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1'
 PNI1 = [15, 13, 9, 8, 7, 5, 0]
 
-pnSI1 = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port')
-% pnSI2 = cinioinimm.PNSequence('Polynomial', PNI1)
-
-%x1 = pnSI1();
-%x2 = psSI2();
-
-seq1 = comm.PNSequence('Polynomial', [3,2,0],'InitialConditions', [0,0,1], 'SamplesPerFrame', 7, 'MaskSource', 'Input Port')
-seq2 = comm.PNSequence('Polynomial', [3,2,0],'InitialConditions', 1, 'SamplesPerFrame', 7, 'MaskSource', 'Input Port')
-
 PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
 PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
 
@@ -67,4 +58,7 @@ W(1,:)
 %%
 %Generate and encode the pilot channel sequence go
 
+pilotTran = PNISEQ + 2*PNQSEQ;
 
+pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
+    
