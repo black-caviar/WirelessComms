@@ -75,18 +75,27 @@ audio1 = audioread('SpeechDFT-16-8-mono-5secs.wav');
 audiowrite('testfile.wav', audio1, 2^13, 'BitsPerSample', 8);
 audio2 = audioread(testfile);
 %play sound
-
+  
 intAudio = audioread(testfile, 'native');
 audioFrame = audio2frame(intAudio);
-%newAudio = frame2audio(audioFrame);
 
-%CRCPOLY = [12, 11, 10, 9, 8, 4, 1, 0];
-%crcgenerator = comm.CRCGenerator('Polynomial', CRCPOLY, 'ChecksumsPerFrame', 1, 'DirectMethod', true);
+[decodeFrame, errors] = frame2bin(audioFrame);
+newAudio = frame2audio(decodeFrame);
+
+%% Perform convolutional encoding on the audio frames 
+
+trellis = poly2trellis(9, [753, 561])
+% split the streams 
+
+vChan = cell(8,1);
+for i = 1:8
+    dataStream = audioFrame(:,i:8:end);
+    bitStream = reshape(dataStream, 1, []);
+    encStream = convenc(bitStream, trellis);
+    vChan{i} = reshape(encStream, 384, []);
+end
 
 
-
-
-% append 8 tail bits after crc 
 %% Generate and encode voice channel 
     
 %% FFF
@@ -105,26 +114,48 @@ soundsc(xx, 2^13)
 
 function frame = audio2frame(audio)
     % Convert integer audio matrix to valid 192 bit frames
-    trimLen = floor(length(audio)*8/168)*21;
-    trimAudio = audio(1:trimLen);
-    binAudio = de2bi(trimAudio)';
+    binAudio = de2bi(audio)';
+    vecAudio = reshape(binAudio(:), 1, []);
+    
+    trimLen = floor(length(vecAudio)/171);
+    trimAudio = vecAudio(1:trimLen*171);
+    rawFrame = reshape(trimAudio, 171, []);
+    padFrame = [zeros([1,length(rawFrame)]); rawFrame];
+    
+    %trimLen = floor(length(audio)*8/168)*21;
+    %trimAudio = audio(1:trimLen);
+    %binAudio = de2bi(trimA udio)';
     
     % I could fit 171 bits worth of audio into every frame, but that 
     % is a strange and unweildy value. Use 168 bits instead and pad 
-    rawFrame = cast(reshape(binAudio(:),168,[]), 'double');
-    padFrame = [zeros([1,length(rawFrame)]); rawFrame; zeros([3,length(rawFrame)])];
+    %rawFrame = cast(reshape(binAudio(:),168,[]), 'double');
+    %padFrame = [zeros([1,length(rawF = audio2frame(intAudio);
+%nrame)]); rawFrame; zeros([3,length(rawFrame)])];
     
     poly = [1,1,1,1,1,0,0,0,1,0,0,1,1];
     crcgenerator = crc.generator(poly)
     
     crcFrame = generate(crcgenerator, padFrame);
     frame = [crcFrame; zeros([8,length(crcFrame)])];
+    frame = cast(frame, 'double');
 end
 
-function audio = frame2audio(frame)
-    frame(185:192,:) = []; %remove padding T
+function [rawFrame, errorFrames] = frame2bin(frame)
+    %remove padding from end 
+    frame(185:192,:) = [];
     
-    binAudio = reshape(frame, 8, []);
-    audio = bi2de(binAudio');
-    %audio = binAudio;
+    poly = [1,1,1,1,1,0,0,0,1,0,0,1,1];
+    crcdetect = crc.detector(poly)
+    
+    [rawFrame, errorFrames] = detect(crcdetect, frame);
+    rawFrame(1,:) = [];
+end
+
+function intAudio = frame2audio(frame)
+    vecAudio = reshape(frame(:), 1, []);
+    padLen = ceil(length(vecAudio)/8)*8 - length(vecAudio)
+    padAudio = [vecAudio, zeros([1,padLen])];
+    
+    binAudio = reshape(padAudio, 8, []);
+    intAudio = bi2de(binAudio');
 end
