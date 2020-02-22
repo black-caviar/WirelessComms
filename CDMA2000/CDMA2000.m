@@ -1,8 +1,8 @@
 %% CDMA2000 X1 Voice Channel Simulation
-
+%% Generate short PN sequence 
 PN_Offset = 1;
 
-%Short PN sequence polynomials 
+% Short PN sequence polynomials 
 PNI = 'x^15 + x^13 + x^9 + x^8 + x^7 + x^5 + 1';
 PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1';
 
@@ -15,8 +15,7 @@ PNQSEQ = PNQGEN(de2bi(1,15));
 
 SPNSEQ = [PNISEQ, PNQSEQ];
 
-
-%%
+%% Augment PN sequence 
 zCount = 0;
 zCountQ = 0;
 for i = 1:length(SPNSEQ) 
@@ -50,16 +49,12 @@ end
 PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1, 0];
 
 
-%%
-
-%Walsh = comm.WalshCode('Length', 64, 'Index', 1, 'SamplesPerFrame', 64);
-%useless 
+%% Generate Walsh code 
 
 W = hadamard(64);
+longW = repmat(W, [1,length(PNQSEQ)/length(W)]);
 
-W(1,:)
-
-%% Generate and encode the pilot channel sequence go
+%% Generate and encode the pilot channel sequence
 
 pilotTran = PNISEQ + 2*PNQSEQ;
 pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
@@ -98,19 +93,6 @@ end
 
 %% Generate and encode voice channel 
     
-%% FFF
-X = dct(audio2);
-[XX,ind] = sort(abs(X),'descend');
-
-need = 1;
-while norm(X(ind(1:need)))/norm(X)<0.99
-   need = need+1;
-end
-
-xpc = need/length(X)*100;
-X(ind(need+1:end)) = 0;
-xx = idct(X);
-soundsc(xx, 2^13)
 
 function frame = audio2frame(audio)
     % Convert integer audio matrix to valid 192 bit frames
