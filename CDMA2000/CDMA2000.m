@@ -1,50 +1,47 @@
 %% CDMA2000 X1 Voice Channel Simulation
-%% Generate short PN sequence 
-PN_Offset = 1;
-
+clear all; close all; clc
+%% Generate augmented short PN sequence 
 % Short PN sequence polynomials 
 PNI = 'x^15 + x^13 + x^9 + x^8 + x^7 + x^5 + 1';
 PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1';
 
-%Generate short PN sequence with offset PN_Offset
-PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', PN_Offset, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
-PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', PN_Offset, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
+% Generate short PN sequence with offset 1
+PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
+PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
 
 PNISEQ = PNIGEN(de2bi(1,15));
 PNQSEQ = PNQGEN(de2bi(1,15)); 
 
-SPNSEQ = [PNISEQ, PNQSEQ];
-
-%% Augment PN sequence 
-zCount = 0;
-zCountQ = 0;
-for i = 1:length(SPNSEQ) 
+% Augment PN sequence 
+zCount = [0,0];
+for i = 1:2^15-1 
     if (PNISEQ(i) == 0)
-        zCountI = zCountI + 1;
+        zCount(1) = zCount(1) + 1;
     else 
-        zCountI = 0;
+        zCount(1) = 0;
     end
     
     if (PNQSEQ(i) == 0)
-        zCountQ = zCountQ + 1;
+        zCount(2) = zCount(2) + 1;
     else 
-        zCountQ = 0;
+        zCount(2) = 0;
     end
     
-    if (zCountI == 14)
-        disp 'found it 1'
+    if (zCount(1) == 14)
+        disp 'augmented I sequence at '
         disp(i)
         PNISEQ = [PNISEQ(1:i-1); 0; PNISEQ(i:end)];
     end
     
-    if (zCountQ == 14)
-        disp 'found it 2'
+    if (zCount(2) == 14)
+        disp 'augmented Q sequence at '
         disp(i)
         PNQSEQ = [PNQSEQ(1:i-1); 0; PNQSEQ(i:end)];
     end
+    % too lazy to short circuit evaluation, runs fast anyway 
 end
 
-
+PNSEQ = [PNISEQ,PNQSEQ];
 %% Long PN Sequence 
 PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1, 0];
 
@@ -52,12 +49,21 @@ PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1,
 %% Generate Walsh code 
 
 W = hadamard(64);
-longW = repmat(W, [1,length(PNQSEQ)/length(W)]);
+% Stretch Walsh matrix to length of PN sequence 
+longW = repmat(W, [1,length(PNSEQ)/length(W)]);
 
 %% Generate and encode the pilot channel sequence
-
-pilotTran = PNISEQ + 2*PNQSEQ;
+% Chose some offset for the station sequence 
+stationN = 200;
+SSEQ1 = circshift(PNSEQ, stationN * 64);
+% The Walsh encoding for the pilot channel can be ignored if desired
+%pilotTran = SSEQ1(:,1)' .* longW(1,:) + 2*SSEQ1(:,2)' .* longW(1,:);
+pilotTran = bi2de(SSEQ1);
 pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
+
+SSEQ2 = circshift(PNSEQ, 70 * 64);
+pilotTran2 = bi2de(SSEQ2);
+pilotChan2 = 0.8*pskmod(pilotTran2, 4, pi/4, 'gray');
 
 %% Encode Voice Audio 
 % This is a crude method of compressing audio that is not representative
@@ -93,6 +99,30 @@ end
 
 %% Generate and encode voice channel 
     
+%% Transmit 
+
+%out = awgn(pilotChan, 10);
+out = awgn(pilotChan + pilotChan2, 20);
+%figure;
+scatterplot(out, 1, 0, 'b*');
+
+%% Receive 
+
+%refSEQ = pskmod(bi2de(PNSEQ), 4, pi/4, 'gray');
+
+rx = pskdemod(out, 4, pi/4, 'gray');
+rxPN = de2bi(rx);
+%iCorr = xcorr(PNISEQ, rxPN(:,1));
+%qCorr = xcorr(PNQSEQ, rxPN(:,2));
+%iCorr = cconv(PNISEQ, rxPN(:,1));
+
+%iCorr = correlate(PNSEQ, rxPN);
+iCorr = correlate(PNSEQ, rxPN);
+figure;
+plot(iCorr);
+legend;
+figure;
+plot(correlate(PNSEQ, SSEQ2));
 
 function frame = audio2frame(audio)
     % Convert integer audio matrix to valid 192 bit frames
@@ -140,4 +170,16 @@ function intAudio = frame2audio(frame)
     
     binAudio = reshape(padAudio, 8, []);
     intAudio = bi2de(binAudio');
+end
+
+function rate = correlate(ref, test)
+    if (size(ref) ~= size(test))
+        error("Input arguments must have same dimensions");
+    end
+    rate = zeros(size(test));
+    for i = 1:length(test)
+        shift = circshift(ref,i);
+        rate(i,:) = sum(shift.*test);
+    end
+
 end
