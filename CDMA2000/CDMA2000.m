@@ -85,9 +85,13 @@ newAudio = frame2audio(decodeFrame);
 
 %% Perform convolutional encoding on the audio frames 
 
+% 3.1.3.1.5.1.4Rate 1/2 Convolutional Code
 trellis = poly2trellis(9, [753, 561])
 % split the streams 
 
+% reset the endcoder to 0 at every new frame,
+% reshaping can be done later? Or is it inconvenient 
+% 3.1.3.15.3Forward Fundamental Channel Convolutional Encoding
 vChan = cell(8,1);
 for i = 1:8
     dataStream = audioFrame(:,i:8:end);
@@ -96,13 +100,40 @@ for i = 1:8
     vChan{i} = reshape(encStream, 384, []);
 end
 
+bitStream = reshape(audioFrame, 1, []);
+encStream = convenc(bitStream, trellis);
+convFrame = reshape(encStream, 384, []);
+
+%% Interleaving
+% Table 3.1.3.1.8-1. Interleaver Parameters
+
+m = 6;
+J = 6;
+
+A = @(i) 2^m * mod(i,J) + bi2de(flip(de2bi(floor(i/J),m)));
+
+%convFrame = [0:47]';
+interleavedFrame = zeros(size(convFrame));
+deinterleavedFrame = zeros(size(convFrame));
+interleaveMap = zeros(length(convFrame), 1);
+
+for i = [1:384]
+    interleavedFrame(A(i-1)+1,:) = convFrame(i,:); 
+    interleaveMap(A(i-1)+1) = i-1;
+end
+
+% Deinterleaving has been a success here
+for i = [1:384]
+    h = interleaveMap(i);
+    deinterleavedFrame(h+1,:) = interleavedFrame(i,:); 
+end
 
 %% Generate and encode voice channel 
     
 %% Transmit 
 
 %out = awgn(pilotChan, 10);
-out = awgn(pilotChan + pilotChan2, 20);
+out = awgn(pilotChan + pilotChan2, 10);
 %figure;
 scatterplot(out, 1, 0, 'b*');
 
@@ -129,10 +160,11 @@ function frame = audio2frame(audio)
     binAudio = de2bi(audio)';
     vecAudio = reshape(binAudio(:), 1, []);
     
-    trimLen = floor(length(vecAudio)/171);
-    trimAudio = vecAudio(1:trimLen*171);
-    rawFrame = reshape(trimAudio, 171, []);
-    padFrame = [zeros([1,length(rawFrame)]); rawFrame];
+    trimLen = floor(length(vecAudio)/172);
+    trimAudio = vecAudio(1:trimLen*172);
+    rawFrame = reshape(trimAudio, 172, []);
+    %padFrame = [zeros([1,length(rawFrame)]); rawFrame];
+    padFrame = rawFrame;
     
     %trimLen = floor(length(audio)*8/168)*21;
     %trimAudio = audio(1:trimLen);
@@ -148,6 +180,7 @@ function frame = audio2frame(audio)
     crcgenerator = crc.generator(poly)
     
     crcFrame = generate(crcgenerator, padFrame);
+    % 3.1.3.15.2.2 Forward Fundamental Channel Encoder Tail Bits
     frame = [crcFrame; zeros([8,length(crcFrame)])];
     frame = cast(frame, 'double');
 end
@@ -156,11 +189,12 @@ function [rawFrame, errorFrames] = frame2bin(frame)
     %remove padding from end 
     frame(185:192,:) = [];
     
+    % Figure 3.1.3.1.4.1.2-1
     poly = [1,1,1,1,1,0,0,0,1,0,0,1,1];
     crcdetect = crc.detector(poly)
     
     [rawFrame, errorFrames] = detect(crcdetect, frame);
-    rawFrame(1,:) = [];
+    %rawFrame(1,:) = [];
 end
 
 function intAudio = frame2audio(frame)
