@@ -6,10 +6,12 @@ PNI = 'x^15 + x^13 + x^9 + x^8 + x^7 + x^5 + 1';
 PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1';
 
 % Generate short PN sequence with offset 1
-PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
-PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
+PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, ...
+'SamplesPerFrame', 2^15-1, 'Mask', 'Input Port');
+PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, ...
+'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
 
-PNISEQ = PNIGEN(de2bi(1,15));
+PNISEQ = PNIGEN();
 PNQSEQ = PNQGEN(de2bi(1,15)); 
 
 % Augment PN sequence 
@@ -44,7 +46,8 @@ end
 PNSEQ = [PNISEQ,PNQSEQ];
 %% Long PN Sequence 
 PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1, 0];
-
+PNLGEN = comm.PNSequence('Polynomial', PNL, 'InitialConditions', 1, 'SamplesPerFrame', 2^31-1, 'MaskSource', 'Input Port');
+PNLSEQ = PNLGEN(de2bi(1,42));
 
 %% Generate Walsh code 
 
@@ -115,18 +118,24 @@ A = @(i) 2^m * mod(i,J) + bi2de(flip(de2bi(floor(i/J),m)));
 %convFrame = [0:47]';
 interleavedFrame = zeros(size(convFrame));
 deinterleavedFrame = zeros(size(convFrame));
+interleaveMap = zeros(length(convFrame), 1);
 
-
-for i = [1:3]
+for i = [1:384]
     interleavedFrame(A(i-1)+1,:) = convFrame(i,:); 
     interleaveMap(A(i-1)+1) = i-1;
 end
 
-
-for i = [1:48]
+% Deinterleaving has been a success here
+for i = [1:384]
     h = interleaveMap(i);
     deinterleavedFrame(h+1,:) = interleavedFrame(i,:); 
 end
+
+%% Modulate with PN code 
+
+
+
+%% Convert to transmit symbols  
 
 %% Generate and encode voice channel 
     

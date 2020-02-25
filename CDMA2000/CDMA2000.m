@@ -6,45 +6,17 @@ PNI = 'x^15 + x^13 + x^9 + x^8 + x^7 + x^5 + 1';
 PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1';
 
 % Generate short PN sequence with offset 1
-PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
-PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, 'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
-
-PNISEQ = PNIGEN(de2bi(1,15));
-PNQSEQ = PNQGEN(de2bi(1,15)); 
+PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, ...
+    'SamplesPerFrame', 2^15-1, 'Mask', de2bi(1,15));
+PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, ...
+    'SamplesPerFrame', 2^15-1, 'Mask', de2bi(1,15));
 
 % Augment PN sequence 
-zCount = [0,0];
-for i = 1:2^15-1 
-    if (PNISEQ(i) == 0)
-        zCount(1) = zCount(1) + 1;
-    else 
-        zCount(1) = 0;
-    end
-    
-    if (PNQSEQ(i) == 0)
-        zCount(2) = zCount(2) + 1;
-    else 
-        zCount(2) = 0;
-    end
-    
-    if (zCount(1) == 14)
-        disp 'augmented I sequence at '
-        disp(i)
-        PNISEQ = [PNISEQ(1:i-1); 0; PNISEQ(i:end)];
-    end
-    
-    if (zCount(2) == 14)
-        disp 'augmented Q sequence at '
-        disp(i)
-        PNQSEQ = [PNQSEQ(1:i-1); 0; PNQSEQ(i:end)];
-    end
-    % too lazy to short circuit evaluation, runs fast anyway 
-end
-
-PNSEQ = [PNISEQ,PNQSEQ];
+PNSEQ = [augmentPN(PNIGEN()), augmentPN(PNQGEN())];
 %% Long PN Sequence 
 PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1, 0];
-
+PNLGEN = comm.PNSequence('Polynomial', PNL, 'InitialConditions', 1, 'SamplesPerFrame', 2^31-1, 'MaskSource', 'Input Port');
+PNLSEQ = PNLGEN(de2bi(1,42));
 
 %% Generate Walsh code 
 
@@ -127,6 +99,12 @@ for i = [1:384]
     h = interleaveMap(i);
     deinterleavedFrame(h+1,:) = interleavedFrame(i,:); 
 end
+
+%% Modulate with PN code 
+
+
+
+%% Convert to transmit symbols  
 
 %% Generate and encode voice channel 
     
