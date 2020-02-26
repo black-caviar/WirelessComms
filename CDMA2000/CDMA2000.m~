@@ -7,105 +7,66 @@ PNQ = 'x^15 + x^12 + x^11 + x^10 + x^6 + x^5 + x^4 + x^3 + 1';
 
 % Generate short PN sequence with offset 1
 PNIGEN = comm.PNSequence('Polynomial', PNI, 'InitialConditions', 1, ...
-'SamplesPerFrame', 2^15-1, 'Mask', 'Input Port');
+    'SamplesPerFrame', 2^15-1, 'Mask', de2bi(1,15));
 PNQGEN = comm.PNSequence('Polynomial', PNQ, 'InitialConditions', 1, ...
-'SamplesPerFrame', 2^15-1, 'MaskSource', 'Input Port');
-
-PNISEQ = PNIGEN();
-PNQSEQ = PNQGEN(de2bi(1,15)); 
+    'SamplesPerFrame', 2^15-1, 'Mask', de2bi(1,15));
 
 % Augment PN sequence 
-zCount = [0,0];
-for i = 1:2^15-1 
-    if (PNISEQ(i) == 0)
-        zCount(1) = zCount(1) + 1;
-    else 
-        zCount(1) = 0;
-    end
-    
-    if (PNQSEQ(i) == 0)
-        zCount(2) = zCount(2) + 1;
-    else 
-        zCount(2) = 0;
-    end
-    
-    if (zCount(1) == 14)
-        disp 'augmented I sequence at '
-        disp(i)
-        PNISEQ = [PNISEQ(1:i-1); 0; PNISEQ(i:end)];
-    end
-    
-    if (zCount(2) == 14)
-        disp 'augmented Q sequence at '
-        disp(i)
-        PNQSEQ = [PNQSEQ(1:i-1); 0; PNQSEQ(i:end)];
-    end
-    % too lazy to short circuit evaluation, runs fast anyway 
-end
+% Won't make use of masks here since it is inconventient 
+PNSEQ = [augmentPN(PNIGEN()), augmentPN(PNQGEN())];
 
-PNSEQ = [PNISEQ,PNQSEQ];
 %% Long PN Sequence 
 PNL = [42, 35, 33, 31, 27, 26, 25, 22, 21, 19, 18, 17, 16, 10, 7, 6, 5, 3, 2, 1, 0];
-PNLGEN = comm.PNSequence('Polynomial', PNL, 'InitialConditions', 1, 'SamplesPerFrame', 2^31-1, 'MaskSource', 'Input Port');
-PNLSEQ = PNLGEN(de2bi(1,42));
+PNLGEN = comm.PNSequence('Polynomial', PNL, 'InitialConditions', 1, ...
+'VariableSizeOutput', true, 'MaskSource', 'Input Port', 'MaximumOutputSize', [2^31-1,1]);
+ENS = de2bi(0,32);
 
 %% Generate Walsh code 
-
 W = hadamard(64);
 % Stretch Walsh matrix to length of PN sequence 
 longW = repmat(W, [1,length(PNSEQ)/length(W)]);
 
 %% Generate and encode the pilot channel sequence
 % Chose some offset for the station sequence 
-stationN = 200;
-SSEQ1 = circshift(PNSEQ, stationN * 64);
+BS_OFFSET = 300;
+SSEQ1 = circshift(PNSEQ, BS_OFFSET * 64);
 % The Walsh encoding for the pilot channel can be ignored if desired
-%pilotTran = SSEQ1(:,1)' .* longW(1,:) + 2*SSEQ1(:,2)' .* longW(1,:);
 pilotTran = bi2de(SSEQ1);
 pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
 
-SSEQ2 = circshift(PNSEQ, 70 * 64);
+SSEQ2 = circshift(PNSEQ, 120 * 64);
 pilotTran2 = bi2de(SSEQ2);
 pilotChan2 = 0.8*pskmod(pilotTran2, 4, pi/4, 'gray');
 
-%% Encode Voice Audio 
+%% Convert audio to binary data 
 % This is a crude method of compressing audio that is not representative
 % of the vocoders used in 
 
 testfile = 'testfile.wav';
 
 %audio = audioread('speech_dft_8kHz.wav');
-audio1 = audioread('SpeechDFT-16-8-mono-5secs.wav');
-audiowrite('testfile.wav', audio1, 2^13, 'BitsPerSample', 8);
-audio2 = audioread(testfile);
+%audio1 = audioread('SpeechDFT-16-8-mono-5secs.wav');
+%audiowrite('testfile.wav', audio1, 2^13, 'BitsPerSample', 8);
+%audio2 = audioread(testfile);
 %play sound
   
 intAudio = audioread(testfile, 'native');
 audioFrame = audio2frame(intAudio);
 
-[decodeFrame, errors] = frame2bin(audioFrame);
-newAudio = frame2audio(decodeFrame);
+%[decodeFrame, errors] = frame2bin(audioFrame);
+%newAudio = frame2audio(decodeFrame);
 
 %% Perform convolutional encoding on the audio frames 
-
 % 3.1.3.1.5.1.4Rate 1/2 Convolutional Code
 trellis = poly2trellis(9, [753, 561])
-% split the streams 
 
 % reset the endcoder to 0 at every new frame,
-% reshaping can be done later? Or is it inconvenient 
-% 3.1.3.15.3Forward Fundamental Channel Convolutional Encoding
-vChan = cell(8,1);
-for i = 1:8
-    dataStream = audioFrame(:,i:8:end);
-    bitStream = reshape(dataStream, 1, []);
-    encStream = convenc(bitStream, trellis);
-    vChan{i} = reshape(encStream, 384, []);
-end
+% 3.1.3.15.3 Forward Fundamental Channel Convolutional Encoding
+convFrame = zeros(384,length(audioFrame));
 
-bitStream = reshape(audioFrame, 1, []);
-encStream = convenc(bitStream, trellis);
-convFrame = reshape(encStream, 384, []);
+for i = 1:length(audioFrame)
+    convFrame(:,i) = convenc(audioFrame(:,i)', trellis)';
+end
 
 %% Interleaving
 % Table 3.1.3.1.8-1. Interleaver Parameters
@@ -131,13 +92,50 @@ for i = [1:384]
     deinterleavedFrame(h+1,:) = interleavedFrame(i,:); 
 end
 
-%% Modulate with PN code 
+%% Modulate with long PN code 
+% Split voice channel into 8 channel streams
+% PN chips are same of the same rate as the data 
+reset(PNLGEN);
+%scrambleFrame = zeros(size(interleavedFrame));
+%scrambleFrame = zeros(384, length(interleavedFrame)/8, 8);
+scrambleFrame = zeros(384 * length(interleavedFrame)/8, 8);
+bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(scrambleFrame));
+deciLPN = bitsLPN(1:64:end);
+    
+for i = 1:8
+    scrambleFrame(:,i) = reshape(interleavedFrame(:,i:8:end), [], 8);
+    %bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(interleavedFrame)/8*384);
+    
+    %codeLPN = reshape(deciLPN, 384, []);
+    scrambleFrame(:,:,i) = xor(codeLPN(:,i), interleavedFrame(:,i:8:end));
+end
+
+%% Encode with Walsh Code 
+% Increase code rate to 1.2288 MCPS 
+% 1228800/19200 = 64
+% 64 Chips per bit are used to spread this particular transmission 
 
 
+
+BS_OFFSET = 300;
+SSEQ1 = circshift(PNSEQ, BS_OFFSET * 64);
+% The Walsh encoding for the pilot channel can be ignored if desired
+pilotTran = bi2de(SSEQ1);
+pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
+
+%% Descramble long PN code 
+
+dataFrame = zeros(size(scrambleFrame));
+reset(PNLGEN);
+
+for i = 1:8
+    bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(interleavedFrame)/8*384);
+    deciLPN = bitsLPN(1:64:end);
+    codeLPN = reshape(deciLPN, 384, []);
+    dataFrame(:,i:8:end) = xor(codeLPN(:,i), scrambleFrame(:,i:8:end));
+end
 
 %% Convert to transmit symbols  
-
-%% Generate and encode voice channel 
     
 %% Transmit 
 
