@@ -145,12 +145,16 @@ end
 
 %% Undo convolutional coding
 
-frameRX = zeros(192, length(deinterleavedRX));
-for i = 1:length(frameRX)
-    % frames of data have been recovered
-    frameRX(:,i) = vitdec(deinterleavedRX(:,i)', trellis, 10, 'trunc', 'hard')';
-end
+frameRX = zeros(172, length(deinterleavedRX));
+for i = 1:length(
 
+% reset the endcoder to 0 at every new frame,
+% 3.1.3.15.3 Forward Fundamental Channel Convolutional Encoding
+convFrame = zeros(384,length(audioFrame));
+for i = 1:length(audioFrame)
+    convFrame(:,i) = convenc(audioFrame(:,i)', trellis)';
+end
+    
 %% Transmit 
 
 %out = awgn(pilotChan, 10);
