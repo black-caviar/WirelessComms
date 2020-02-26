@@ -24,7 +24,7 @@ ENS = de2bi(0,32);
 %% Generate Walsh code 
 W = hadamard(64);
 % Stretch Walsh matrix to length of PN sequence 
-longW = repmat(W, [1,length(PNSEQ)/length(W)]);
+%longW = repmat(W, [1,length(PNSEQ)/length(W)]);
 
 %% Generate and encode the pilot channel sequence
 % Chose some offset for the station sequence 
@@ -96,17 +96,12 @@ end
 % Split voice channel into 8 channel streams
 % PN chips are same of the same rate as the data 
 reset(PNLGEN);
-%scrambleFrame = zeros(size(interleavedFrame));
-%scrambleFrame = zeros(384, length(interleavedFrame)/8, 8);
 scrambleFrame = zeros(384 * length(interleavedFrame)/8, 8);
 bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(scrambleFrame));
 deciLPN = bitsLPN(1:64:end)';
     
 for i = 1:8
     scrambleFrame(:,i) = reshape(interleavedFrame(:,i:8:end), [], 1);
-    %bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(interleavedFrame)/8*384);
-    
-    %codeLPN = reshape(deciLPN, 384, []);
     scrambleFrame(:,i) = xor(deciLPN(:,i), scrambleFrame(:,i));
 end
 
@@ -114,14 +109,22 @@ end
 % Increase code rate to 1.2288 MCPS 
 % 1228800/19200 = 64
 % 64 Chips per bit are used to spread this particular transmission 
+spreadCode = rectpulse(scrambleFrame, 64);
+for i = 1:length(scrambleFrame)
+    spreadCodeW = 
+end
 
 
+for i = 1:8
+    longW = repmat(W(i,:), [1,length(spreadCode)/length(W)]);
+    %spreadCode(:,i) 
+end
 
-BS_OFFSET = 300;
-SSEQ1 = circshift(PNSEQ, BS_OFFSET * 64);
+%BS_OFFSET = 300;
+%SSEQ1 = circshift(PNSEQ, BS_OFFSET * 64);
 % The Walsh encoding for the pilot channel can be ignored if desired
-pilotTran = bi2de(SSEQ1);
-pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
+%pilotTran = bi2de(SSEQ1);
+%pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
 
 %% Descramble long PN code 
 
@@ -129,10 +132,10 @@ dataFrame = zeros(size(scrambleFrame));
 reset(PNLGEN);
 
 for i = 1:8
-    bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(interleavedFrame)/8*384);
-    deciLPN = bitsLPN(1:64:end);
-    codeLPN = reshape(deciLPN, 384, []);
-    dataFrame(:,i:8:end) = xor(codeLPN(:,i), scrambleFrame(:,i:8:end));
+    %bitsLPN = PNLGEN(maskPNLC(ENS), 64*length(interleavedFrame)/8*384);
+    %deciLPN = bitsLPN(1:64:end);
+    %codeLPN = reshape(deciLPN, 384, []);
+    godataFrame(:,i:8:end) = xor(codeLPN(:,i), scrambleFrame(:,i:8:end));
 end
 
 %% Convert to transmit symbols  
