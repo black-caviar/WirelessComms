@@ -13,7 +13,7 @@ function frame = audio2frame(audio)
     % 2.1.3.1.4.1.2 Frame Quality Indicator of Length 12
     poly = [1,1,1,1,1,0,0,0,1,0,0,1,1];
     
-    crcgenerator = crc.generator(poly)
+    crcgenerator = crc.generator(poly);
     crcFrame = generate(crcgenerator, padFrame);
     
     % 3.1.3.15.2.2 Forward Fundamental Channel Encoder Tail Bits

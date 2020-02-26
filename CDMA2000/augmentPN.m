@@ -8,7 +8,7 @@ function augmentedPN = augmentPN(PN)
         end
         
         if (zcount == 14)
-            disp 'augmented I sequence at '
+            disp 'augmented sequence at '
             disp(i)
             PN = [PN(1:i-1); 0; PN(i:end)];
             augmentedPN = circshift(PN, length(PN)-i-1);
