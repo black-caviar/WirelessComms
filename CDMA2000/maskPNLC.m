@@ -1,4 +1,5 @@
 function PLCM_42 = maskPNLC(ENS)
+    % 2.1.3.1.16 Direct Sequence Spreading 
     head = [1,1,0,0,0,1,1,0,0,0];
     % ESN - Electronic serial number [31:0]
     pVec = [0, 31, 22, 13, 4, 26, 17, 8, 30, 21, 12, 3, 25, 16, 7, 29, ... 
