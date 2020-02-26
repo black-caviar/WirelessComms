@@ -149,12 +149,14 @@ pilotRX = pskdemod(noisySignal, 4, pi/4, 'gray');
 pnRX = de2bi(pilotRX);
 pCorr = correlate(PNSEQ, pnRX);
 figure;
-plot(pCorr);
+plot(pCorr, 'LineWidth', 2);
 title("Base Station Pilot Channel Power");
-legend('I Code', 'Q Code');
+hold on;
 
-[~,peak] = max(pCorr);
+[maxVal,peak] = max(pCorr);
 StationOffset = mean(peak)/64
+plot(peak, maxVal, 'c*', 'MarkerSize', 10, 'MarkerFaceColor', [0.5,0.5,0.5]);
+legend('I Code', 'Q Code');
 
 %% Decode spreading codes
 test = [real(complexSignal), imag(complexSignal)];

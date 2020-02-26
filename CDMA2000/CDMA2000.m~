@@ -130,7 +130,7 @@ SSEQ3 = circshift(longshortPN, 400*64);
 pilotTran3 = bi2de(SSEQ3);
 pilotChan3 = 0.5*pskmod(pilotTran3, 4, pi/4, 'gray');
 
-combSignal = normalize(complexSignal + pilotChan + pilotChan2 + pilotChan3, 'scale');
+combSignal = complexSignal + pilotChan + pilotChan2 + pilotChan3;
 %% Transmit the baseband 
 % Raw constellations
 scatterplot(combSignal, 1, 0, 'b*');
@@ -139,7 +139,7 @@ title("Constellation at Transmitter Output");
 chan = [.8,.4,.2];
 channelSignal = filter(chan, 1, combSignal);
 %channelSignal = combSignal;
-noisySignal = awgn(channelSignal, 10);
+noisySignal = awgn(channelSignal, 1);
 %noisySignal = combSignal;
 
 scatterplot(noisySignal, 1, 0, 'b*');
@@ -149,12 +149,14 @@ pilotRX = pskdemod(noisySignal, 4, pi/4, 'gray');
 pnRX = de2bi(pilotRX);
 pCorr = correlate(PNSEQ, pnRX);
 figure;
-plot(pCorr);
+plot(pCorr, 'LineWidth', 2);
 title("Base Station Pilot Channel Power");
-legend('I Code', 'Q Code');
+hold on;
 
-[~,peak] = max(pCorr);
-StationOffset = mean(peak)/64;
+[maxVal,peak] = max(pCorr);
+StationOffset = mean(peak)/64
+plot(peak, maxVal, 'c*', 'MarkerSize', 20, 'MarkerColor', [0.5,0.5,0.5]);
+legend('I Code', 'Q Code');
 
 %% Decode spreading codes
 test = [real(complexSignal), imag(complexSignal)];
