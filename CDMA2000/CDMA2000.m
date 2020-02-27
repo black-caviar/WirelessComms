@@ -45,9 +45,10 @@ testfile = 'testfile.wav';
   
 intAudio = audioread(testfile, 'native');
 audioFrame = audio2frame(intAudio);
-
+disp 'playing sample audio'
+soundsc(cast(intAudio, 'double'));
 %% Perform convolutional encoding on the audio frames 
-% 3.1.3.1.5.1.4 Rate 1/2 Convolutional Code
+% This Rate 1/2 Convolutional Code
 trellis = poly2trellis(9, [753, 561]);
 
 % reset the endcoder to 0 at every new frame,
@@ -111,6 +112,7 @@ longshortPN = repmat(SSEQ1, [length(unifiedSignal)/length(PNSEQ),1]);
 extendPNSEQ = qammod(longshortPN,2);
 basebandSignal = unifiedSignal .* extendPNSEQ;
 complexSignal = basebandSignal(:,1) + 1i*basebandSignal(:,2);
+scaledSignal = complexSignal/max(abs(complexSignal));
 
 %% Add pilot channel
 % Chose some offset for the station sequence 
@@ -123,23 +125,28 @@ pilotChan = pskmod(pilotTran, 4, pi/4, 'gray');
 % Generate some other pilot channel at a lower power
 SSEQ2 = circshift(longshortPN, 100*64);
 pilotTran2 = bi2de(SSEQ2);
-pilotChan2 = 0.8*pskmod(pilotTran2, 4, pi/4, 'gray');
+pilotChan2 = 0.5*pskmod(pilotTran2, 4, pi/4, 'gray');
 
 % And another one
 SSEQ3 = circshift(longshortPN, 400*64);
 pilotTran3 = bi2de(SSEQ3);
-pilotChan3 = 0.5*pskmod(pilotTran3, 4, pi/4, 'gray');
+pilotChan3 = 0.2*pskmod(pilotTran3, 4, pi/4, 'gray');
 
-combSignal = complexSignal + pilotChan + pilotChan2 + pilotChan3;
+%combSignal = scaledSignal + pilotChan + pilotChan2 + pilotChan3;
+combSignal = scaledSignal + pilotChan;
+strangeSignal = pilotChan2 + pilotChan3;
 %% Transmit the baseband 
 % Raw constellations
 scatterplot(combSignal, 1, 0, 'b*');
 title("Constellation at Transmitter Output");
 
-chan = [.8,.4,.2];
+interference = filter([.227,0.460,0.688,0.460,0.277], 1, strangeSignal);
+noise = awgn(interference, 20);
+
+chan = [1,.4,.2];
 channelSignal = filter(chan, 1, combSignal);
 %channelSignal = combSignal;
-noisySignal = awgn(channelSignal, 1);
+noisySignal = awgn(channelSignal, 20) + noise;
 %noisySignal = combSignal;
 
 scatterplot(noisySignal, 1, 0, 'b*');
@@ -150,12 +157,17 @@ pnRX = de2bi(pilotRX);
 pCorr = correlate(PNSEQ, pnRX);
 figure;
 plot(pCorr, 'LineWidth', 2);
-title("Base Station Pilot Channel Power");
+title("Base Station Pilot Correlation");
+ylabel('Correlation Rate');
+xlabel('PN Phase Offset');
+xlim([0,length(PNSEQ)]);
 hold on;
 
 [maxVal,peak] = max(pCorr);
 StationOffset = mean(peak)/64
-plot(peak, maxVal, 'c*', 'MarkerSize', 10, 'MarkerFaceColor', [0.5,0.5,0.5]);
+plot(peak, maxVal, 'c*', 'MarkerSize', 10);
+%text(peak(1), maxVal(1), 'I Max');
+%text(peak(2), maxVal(2), 'Q Max');
 legend('I Code', 'Q Code');
 
 %% Decode spreading codes
@@ -190,11 +202,10 @@ end
 %% Transform frames to audio 
 
 [decodeFrame, errors] = frame2bin(frameRX);
+disp 'Frame errors encountered'
+sum(errors)
 newAudio = frame2audio(decodeFrame);
-
-figure;
-plot(errors);
-title("Transmission errors encountered");
+soundsc(cast(newAudio, 'double'))
 
 
 
