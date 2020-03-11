@@ -32,8 +32,10 @@ function ray = genRayChan(N, v, fc)
     net = s0.^2 + (s1*1j).^2;
     
     % Normalize power to 1
-    norm = net ./ mean(abs(net));
+    norm = mean(abs(
     
     % Rayleigh Time varying channel 
-    ray = sqrt(norm);    
+    ray = sqrt(net);    
+    
+    % remeber to scale for average power of 1
 end
