@@ -25,7 +25,7 @@ Sef = Se(f,fm,fc);
 Sef(end) = Sef(end-1) + diff(Sef(end-2:end-1));
 Sef(1) = Sef(2) - diff(Sef(2:3));
 
-plot(Sef);
+plot(Sef);10.1109/49.730453
 %figure;
 % corrected Se function
 Sefs = sqrt(Sef);
