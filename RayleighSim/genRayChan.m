@@ -31,9 +31,11 @@ function ray = genRayChan(N, v, fc)
     % Sum quadrature noise sources 
     net = s0.^2 + (s1*1j).^2;
     
+    qnet = sqrt(net);
+    
     % Normalize power to 1
-    norm = net ./ mean(abs(net));
+    norm = modnorm(qnet, 'avpow', 1);
     
     % Rayleigh Time varying channel 
-    ray = sqrt(norm);    
+    ray = qnet * norm;    
 end

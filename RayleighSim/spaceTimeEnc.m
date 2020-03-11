@@ -1,4 +1,4 @@
-function tran = spaceTimeEnc(signal, order)
+function tran = spaceTimeEnc(signal)
     % Split signal into symbol sets 
     s0 = signal(1:2:end);
     s1 = signal(2:2:end);

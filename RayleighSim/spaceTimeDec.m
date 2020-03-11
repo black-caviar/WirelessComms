@@ -5,13 +5,13 @@ function signal = spaceTimeDec(rx)
     ds0 = r0 + conj(r1);
     ds1 = r0 - conj(r1);   
     
+    m = 2;
+    s = pskmod([0:m-1], m);
+    
     D = @(x,y) (x - y) .* (conj(x) - conj(y)); 
 
     [d0, ps0] = min(D(ds0, s'));
     [d1, ps1] = min(D(ds1, s'));
-    
-    m = 2;
-    s = pskmod([0:m-1], m);
     
     rs0 = s(ps0);
     rs1 = s(ps1);
