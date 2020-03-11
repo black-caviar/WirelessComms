@@ -1,5 +1,4 @@
 %% Generate Rayleigh channel 
-
 function ray = genRayChan(N, v, fc)
     % Find maximum doppeler frequency 
     fm = v/299792458 * fc;
@@ -24,7 +23,7 @@ function ray = genRayChan(N, v, fc)
     S0 = Ses .* n0;
     S1 = Ses .* n1;
     
-    % Convert to noise signal 
+    % Convert to noise signal tx(1,:) .* noise1 
     s0 = ifft(S0);
     s1 = ifft(S1);
     
@@ -32,10 +31,16 @@ function ray = genRayChan(N, v, fc)
     net = s0.^2 + (s1*1j).^2;
     
     qnet = sqrt(net);
+    %ray = qnet;
+    
+    %mean(abs(qnet))
     
     % Normalize power to 1
-    norm = modnorm(qnet, 'avpow', 1);
+    norm = modnorm(qnet, 'avpow', 1)
     
     % Rayleigh Time varying channel 
     ray = qnet * norm;    
+    
+    figure; plot([1:70], abs(ray(1:70)));
+    title("Rayleigh Fading Signal Portion");
 end
