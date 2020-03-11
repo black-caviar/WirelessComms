@@ -1,6 +1,6 @@
 %% ChannelSim 
 
-N = 2^10;
+N = 2^20;
 
 fc = 1e9;
 
@@ -26,13 +26,18 @@ S1 = Se(f, fm, fc) .* n1;
 %t = zeros(size(n0)) + 1;
 plot(Se(f,fm,fc));
 
-%plot(abs(n0));
+plot(abs(n0));
 
-s0 = ifft(S0);
-s1 = ifft(S1);
+% The problem is the presence of infinity at the extremes of Se
+% Not sure if formula is adjusted correctly, looks waay too steep
+% Check if plot is logarithmic
+% Find way to solve infinity issue 
+
+s0 = ifft(S0(2:end-1));
+s1 = ifft(S1(2:end-1));
 
 net = s0.^2 + (s1*1j).^2;
 sig = sqrt(net);
 
-plot(sig)
+plot(abs(sig))
 
