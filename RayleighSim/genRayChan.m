@@ -9,8 +9,8 @@ function ray = genRayChan(N, v, fc)
     X1 = randn(1,N/2) + 1j*randn(1,N/2);
     
     % Constructsig negative frequency components
-    n0 = [conj(X0),X0];
-    n1 = [conj(X1),X1];
+    n0 = [flip(conj(X0)),X0];
+    n1 = [flip(conj(X1)),X1];
     
     % -fc just takes is back to baseband
     Se = 1.5 ./ (pi * fm * sqrt(1 - ((f-fc)/fm).^2));
@@ -36,7 +36,7 @@ function ray = genRayChan(N, v, fc)
     %mean(abs(qnet))
     
     % Normalize power to 1
-    norm = modnorm(qnet, 'avpow', 1)
+    norm = modnorm(qnet, 'avpow', 1);
     
     % Rayleigh Time varying channel 
     ray = qnet * norm;    
