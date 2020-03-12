@@ -41,6 +41,6 @@ function ray = genRayChan(N, v, fc)
     % Rayleigh Time varying channel 
     ray = qnet * norm;    
     
-    figure; plot([1:70], abs(ray(1:70)));
-    title("Rayleigh Fading Signal Portion");
+    %figure; plot([1:70], abs(ray(1:70)));
+    %title("Rayleigh Fading Signal Portion");
 end
