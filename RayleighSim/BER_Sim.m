@@ -3,8 +3,9 @@ clear all; close all; clc;
 
 SNR_Vec = 0:5:50;
 BER_Vec = zeros(3, length(SNR_Vec));
+set(gca,'FontSize',14)
 
-N = 2^10;
+N = 2^22;
 v = 120;
 fc = 2.4e9;
 
@@ -35,6 +36,7 @@ for i = 1:length(SNR_Vec)
     rx_data = pskdemod(rx_deray, 2);
     BER_Vec(1,i) = sum(rx_data ~= data)/N;
 end
+disp('Sim complete for no-coding case')
 
 stdata = spaceTimeEnc(tran);
 ray0 = stdata(1,:) .* lRN0 + stdata(2,:) .* lRN1;
@@ -45,6 +47,7 @@ for i = 1:length(SNR_Vec)
     %rx_data = pskdemod(rx_dec, 2);
     BER_Vec(2,i) = sum(rx_data ~= data)/N;
 end
+disp('Sim complete for 2x1 case')
 
 ray1 = stdata(1,:) .* lRN2 + stdata(2,:) .* lRN3;
 
@@ -58,7 +61,9 @@ for i = 1:length(SNR_Vec)
     %rx_data = pskdemod(rx_dec, 2);
     BER_Vec(3,i) = sum(rx_data ~= data)/N;
 end
+disp('Sim complete for 2x2 case')
 
+figure;
 semilogy(SNR_Vec, BER_Vec(1,:), '-o', 'LineWidth', 2, 'MarkerSize', 10);
 hold on;
 semilogy(SNR_Vec, BER_Vec(2,:), '-d', 'LineWidth', 2, 'MarkerSize', 10);

@@ -2,7 +2,7 @@
 
 clear; clc;
 
-nSym = 2^20;
+nSym = 2^10;
 
 data = randi([0,1], 1, nSym);
 tran = pskmod(data, 2);
