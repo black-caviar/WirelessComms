@@ -13,6 +13,21 @@ PNGEN = comm.PNSequence('Polynomial', PN, 'InitialConditions', 1, ...
     'SamplesPerFrame', 2^8-1, 'Mask', de2bi(1,8));
 PNSEQ = PNGEN();
 
+% My PN implementation
+lenpn = 2^8-1;
+myPNSEQ = zeros(1,lenpn);
+a = de2bi(1,8);
+for i = 1:lenpn
+    myPNSEQ(i) = a(8);
+    x = mod(sum(a(PN(1:4))), 2);
+    a = circshift(a,1);
+    a(1) = x;
+end
+figure; plot(xcorr(PNSEQ', myPNSEQ));
+title("Cross correlation of PN sequences");
+%PNSEQ = myPNSEQ';
+%%
+
 % Oversample PN sequence 
 oPN = zeros(1, 4*length(PNSEQ));
 oPN(1:4:end) = pskmod(PNSEQ,2);

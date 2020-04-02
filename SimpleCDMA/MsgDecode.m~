@@ -13,6 +13,20 @@ PNGEN = comm.PNSequence('Polynomial', PN, 'InitialConditions', 1, ...
     'SamplesPerFrame', 2^8-1, 'Mask', de2bi(1,8));
 PNSEQ = PNGEN();
 
+lenpn = 2^8-1;
+myPNSEQ = zeros(1,lenpn);
+a = de2bi(1,8);
+for i = 1:lenpn
+    myPNSEQ(i) = a(8);
+    %x = mod(sum(a(PN(1:4))), 2);
+    x = mod(mod(mod(a(8) + a(7),2) + a(6),2) + a(1),2);
+    a = circshift(a,1);
+    a(1) = x;
+end
+plot(xcorr(PNSEQ', myPNSEQ))
+PNSEQ = myPNSEQ';
+%%
+
 % Oversample PN sequence 
 oPN = zeros(1, 4*length(PNSEQ));
 oPN(1:4:end) = pskmod(PNSEQ,2);
@@ -79,65 +93,18 @@ chars(:,blanks) = 0;
 char(bi2de(pskdemod(chars, 2)'))'
 
 
-%%
-%close all;
+%% Finding the Frequency and Phase Offset
+
 f = 31 * 2 * pi;
 t = linspace(0, length(Rcvd)/1e6, length(Rcvd));
 s = sin(f * t + 10*(2*pi)/99);
-%13
 
+figure;
 plot(real(xcorr(oPN, rx')));
 hold on;
 plot(s*255);
 hold off;
 xlim([0,length(rx)]);
 title("Fitting Frequency and Phase Offsets");
-xlabel("PN Offset");
-
-%%
-figure; plot(real(xcorr(rxPN, syncSig)));
-
-new = filter(B_RCOS, 1, Rcvd .* s);
-figure; plot(real(xcorr(rxPN, new')));
-scatterplot(new);
-
-data1 = qamdemod(codeCC(syncSig, H(6,:)'),2);
-data2 = qamdemod(codeCC(new', H(6,:)'),2);
-
-H = hadamard(8);
-%%
-vars = zeros(1,300);
-for i = 0:299
-    f = i * 0.1 + 20;
-    s = sin(f * t);
-    new = filter(B_RCOS, 1, Rcvd .* s);
-    vars(i+1) = var(real(new));
-end
-figure; plot(vars);
-%%
-
-vars = zeros(1,100);
-for i = 0:99
-    p = i * 2*pi/99;
-    s = sin(f * t + p);
-    new = filter(B_RCOS, 1, Rcvd .* s);
-    vars(i+1) = var(imag(new));
-end
-figure; plot(vars);
-
-
-%%
-junk = randi([0,1],1,1000);
-enc = pskmod(junk, 2);
-rx = awgn(enc, 20);
-scatterplot(rx);
-
-function rate = correlate(ref, test)
-    
-    rate = zeros(size(ref));
-    for i = 1:length(ref)
-        shift = circshift(ref,i);
-        rate(i,:) = sum(shift.*test(1:length(ref),:));
-    end
-
-end
+xlabel("m Sequence Offset");
+ylabel("Degree of Correlation (dB)");
