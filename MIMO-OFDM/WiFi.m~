@@ -30,7 +30,7 @@ function frame = fmapt(data, pilot)
     h2 = [[0 0 0 0 0], fliplr([data0, pilot, data1, pilot, data3])];
     
     td = ifft([h1,h2]);
-    frame = [td(end-15:end), td];
+    frame = td(
     %frame = [h1, h2];
     %frame = [[0 0 0 0 0 0], data0, pilot, data1, pilot, data2, 0, data3, ...
     %    pilot, data4, -pilot, data5, [0 0 0 0 0 0]];
